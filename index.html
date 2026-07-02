@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Parking Reservation System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>Parking Reservation</h1>
+
+    <div class="menu">
+        <button onclick="showSlots('Outdoor')">Outdoor (6)</button>
+        <button onclick="showSlots('Indoor')">Indoor (2)</button>
+    </div>
+
+    <br>
+
+    <label><strong>Check Availability Date</strong></label><br>
+    <input type="date" id="checkDate" onchange="showSlots(currentType)">
+
+    <hr>
+
+    <h2>Parking Slots</h2>
+
+    <div id="slots"></div>
+
+    <hr>
+
+    <form id="form">
+
+        <h2 id="slotTitle">Select a Slot</h2>
+
+        <input id="name" type="text" placeholder="Driver Name" required>
+
+        <br><br>
+
+        <input id="plate" type="text" placeholder="Car Plate" required>
+
+        <br><br>
+
+        <label><b>Booking Dates</b></label><br><br>
+
+        <input type="date" class="date"><br><br>
+        <input type="date" class="date"><br><br>
+        <input type="date" class="date"><br><br>
+
+        <button type="button" onclick="saveBooking()">
+            Reserve
+        </button>
+
+    </form>
+
+    <hr>
+
+    <h2>Reservations</h2>
+
+    <table>
+
+        <thead>
+
+            <tr>
+                <th>Slot</th>
+                <th>Name</th>
+                <th>Plate</th>
+                <th>Dates</th>
+                <th>Action</th>
+            </tr>
+
+        </thead>
+
+        <tbody id="table"></tbody>
+
+    </table>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
