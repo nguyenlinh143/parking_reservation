@@ -1,299 +1,230 @@
-const slots = {
- // Indoor parking: Slots 1 to 2
-    Indoor: [
-        "I1",
-        "I2"
-    ],
-    // Outdoor parking: Slots 3 to 8
-    Outdoor: [
-        "O3",
-        "O4",
-        "O5",
-        "O6",
-        "O7",
-        "O8"
-    ],
 
-    // Bike parking: 12 slots
-    Bike: [
-        "B1",
-        "B2",
-        "B3",
-        "B4",
-        "B5",
-        "B6",
-        "B7",
-        "B8",
-        "B9",
-        "B10",
-        "B11",
-        "B12"
-    ]
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpu1y9bgzETejQZlafcEm9Td-lFsim5M",
+  authDomain: "parkingreservation-7a499.firebaseapp.com",
+  projectId: "parkingreservation-7a499",
+  storageBucket: "parkingreservation-7a499.firebasestorage.app",
+  messagingSenderId: "56068870868",
+  appId: "1:56068870868:web:d4c6091fcc566072aaa141",
+  measurementId: "G-4PJMHP6DWZ"
+};
+
+// INIT FIREBASE
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const colRef = collection(db, "parking");
+
+
+const slots = {
+
+  Indoor: ["I1", "I2"],
+
+  Outdoor: ["O3", "O4", "O5", "O6", "O7", "O8"],
+
+  Bike: ["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12"]
 
 };
 
 let currentType = "Outdoor";
 let selectedSlot = "";
 
-function getBookings() {
+async function getBookings() {
 
-    return JSON.parse(localStorage.getItem("parking") || "[]");
+  const snapshot = await getDocs(colRef);
 
-}
-
-function saveBookings(data) {
-
-    localStorage.setItem("parking", JSON.stringify(data));
-
-}
-
-function showSlots(type) {
-
-    currentType = type;
-
-    let date = document.getElementById("checkDate").value;
-
-    let bookings = getBookings();
-
-    let html = "";
-
-    slots[type].forEach(slot => {
-
-        let booked = false;
-
-        if (date !== "") {
-
-            booked = bookings.some(b =>
-                b.slot === slot &&
-                Array.isArray(b.dates) &&
-                b.dates.includes(date)
-            );
-
-        }
-
-        html += `
-            <div class="slot ${booked ? "booked" : "available"}"
-                 onclick="selectSlot('${slot}')">
-                ${slot}
-            </div>
-        `;
-
-    });
-
-    document.getElementById("slots").innerHTML = html;
+  return snapshot.docs.map(d => ({
+    id: d.id,
+    ...d.data()
+  }));
 
 }
 
-// =====================
-// SELECT SLOT
-// =====================
+
+async function showSlots(type) {
+
+  currentType = type;
+
+  await renderSlots();
+
+}
+
+
+async function renderSlots() {
+console.log("renderSlots running");
+console.log("currentType:", currentType);
+console.log("slots:", slots[currentType]);
+  const bookings = await getBookings();
+
+  const date = document.getElementById("checkDate")?.value || "";
+
+  let html = "";
+
+  slots[currentType].forEach(slot => {
+
+    let booked = false;
+
+    if (date) {
+
+      booked = bookings.some(b =>
+        b.slot === slot &&
+        Array.isArray(b.dates) &&
+        b.dates.includes(date)
+      );
+
+    }
+
+    html += `
+      <div class="slot ${booked ? "booked" : "available"}"
+           onclick="selectSlot('${slot}')">
+        ${slot}
+      </div>
+    `;
+  });
+
+  document.getElementById("slots").innerHTML = html;
+
+  loadTable(bookings);
+
+}
+
+
 function selectSlot(slot) {
 
-    let date = document.getElementById("checkDate").value;
+  selectedSlot = slot;
 
-    let bookings = getBookings();
-
-    if (date !== "") {
-
-        let booked = bookings.some(b =>
-            b.slot === slot &&
-            Array.isArray(b.dates) &&
-            b.dates.includes(date)
-        );
-
-        if (booked) {
-
-            alert("This slot is already booked on selected date.");
-
-            return;
-
-        }
-
-    }
-
-    selectedSlot = slot;
-
-    document.getElementById("slotTitle").innerText =
-        "Selected Slot: " + slot;
+  document.getElementById("slotTitle").innerText =
+    "Selected Slot: " + slot;
 
 }
 
-function saveBooking() {
+async function saveBooking() {
 
-    if (selectedSlot === "") {
+  if (!selectedSlot) {
+    alert("Please select a slot.");
+    return;
+  }
 
-        alert("Please select a slot.");
+  const name = document.getElementById("name").value.trim();
+  const plate = document.getElementById("plate").value.trim();
 
+  const dates = [...document.querySelectorAll(".date")]
+    .map(d => d.value)
+    .filter(d => d);
+
+  if (!name || !plate || dates.length === 0) {
+    alert("Please fill all fields.");
+    return;
+  }
+
+  const bookings = await getBookings();
+
+  // prevent duplicate booking
+  for (let b of bookings) {
+
+    if (b.slot !== selectedSlot) continue;
+
+    const existingDates = Array.isArray(b.dates) ? b.dates : [];
+
+    for (let d of dates) {
+
+      if (existingDates.includes(d)) {
+        alert(`${selectedSlot} already booked on ${d}`);
         return;
-
+      }
     }
+  }
 
-    let name = document.getElementById("name").value.trim();
+  await addDoc(colRef, {
+    slot: selectedSlot,
+    name,
+    plate,
+    dates
+  });
 
-    let plate = document.getElementById("plate").value.trim();
+  alert("Reservation saved.");
 
-    if (name === "" || plate === "") {
+  document.getElementById("form").reset();
+  selectedSlot = "";
 
-        alert("Please enter name and plate.");
-
-        return;
-
-    }
-
-    let dates = [...document.querySelectorAll(".date")]
-        .map(d => d.value)
-        .filter(d => d !== "");
-
-    if (dates.length === 0) {
-
-        alert("Please select at least one date.");
-
-        return;
-
-    }
-
-    let bookings = getBookings();
-
-    for (let b of bookings) {
-
-        if (b.slot !== selectedSlot) continue;
-
-        let existingDates = Array.isArray(b.dates) ? b.dates : [];
-
-        for (let d of dates) {
-
-            if (existingDates.includes(d)) {
-
-                alert(selectedSlot + " already booked on " + d);
-
-                return;
-
-            }
-
-        }
-
-    }
-
-    bookings.push({
-
-        slot: selectedSlot,
-        name: name,
-        plate: plate,
-        dates: dates
-
-    });
-
-    saveBookings(bookings);
-
-    alert("Reservation saved successfully.");
-
-    // reset form
-    document.getElementById("form").reset();
-    selectedSlot = "";
-    document.getElementById("slotTitle").innerText = "Select a Slot";
-
-    loadTable();
-    showSlots(currentType);
-
-}
-
-function loadTable() {
-
-    let bookings = getBookings();
-
-    if (!bookings || bookings.length === 0) {
-
-        document.getElementById("table").innerHTML =
-            `<tr><td colspan="5">No reservations yet</td></tr>`;
-
-        return;
-
-    }
-
-    let html = "";
-
-    bookings.forEach((b, index) => {
-
-        let dates = Array.isArray(b.dates) ? b.dates : [];
-
-        html += `
-        <tr>
-            <td>${b.slot}</td>
-            <td>${b.name}</td>
-            <td>${b.plate}</td>
-            <td>${dates.join("<br>")}</td>
-            <td>
-                <button class="deleteBtn"
-                    onclick="deleteBooking(${index})">
-                    Delete
-                </button>
-            </td>
-        </tr>
-        `;
-
-    });
-
-    document.getElementById("table").innerHTML = html;
-
-}
-
-function deleteBooking(index) {
-
-    let deletedBy = prompt("Enter your name:");
-
-    if (!deletedBy || deletedBy.trim() === "") {
-
-        alert("Name is required.");
-
-        return;
-
-    }
-
-    let reason = prompt("Reason for deletion:");
-
-    if (!reason || reason.trim() === "") {
-
-        alert("Reason is required.");
-
-        return;
-
-    }
-
-    if (!confirm("Are you sure you want to delete this reservation?")) {
-
-        return;
-
-    }
-
-    let bookings = getBookings();
-
-    console.log({
-
-        deletedBy: deletedBy,
-        reason: reason,
-        deletedBooking: bookings[index]
-
-    });
-
-    bookings.splice(index, 1);
-
-    saveBookings(bookings);
-
-    alert("Reservation deleted.");
-
-    loadTable();
-    showSlots(currentType);
+  await renderSlots();
 
 }
 
 
-window.addEventListener("DOMContentLoaded", function () {
+function loadTable(bookings) {
 
-    if (!localStorage.getItem("parking")) {
-        localStorage.setItem("parking", "[]");
-    }
+  const table = document.getElementById("table");
 
-    showSlots("Outdoor");
-    loadTable();
+  if (!bookings.length) {
+    table.innerHTML = `<tr><td colspan="5">No reservations yet</td></tr>`;
+    return;
+  }
+
+  let html = "";
+
+  bookings.forEach(b => {
+
+    html += `
+      <tr>
+        <td>${b.slot}</td>
+        <td>${b.name}</td>
+        <td>${b.plate}</td>
+        <td>${(b.dates || []).join("<br>")}</td>
+        <td>
+          <button onclick="deleteBooking('${b.id}')">
+            Delete
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  table.innerHTML = html;
+
+}
+
+
+async function deleteBooking(id) {
+
+  const deletedBy = prompt("Enter your name:");
+  if (!deletedBy) return;
+
+  const reason = prompt("Reason for deletion:");
+  if (!reason) return;
+
+  if (!confirm("Are you sure?")) return;
+
+  await deleteDoc(doc(db, "parking", id));
+
+  console.log({ deletedBy, reason });
+
+  alert("Deleted successfully");
+
+  await renderSlots();
+
+}
+
+window.showSlots = showSlots;
+window.selectSlot = selectSlot;
+window.saveBooking = saveBooking;
+window.deleteBooking = deleteBooking;
+
+
+window.addEventListener("DOMContentLoaded", async () => {
+
+  currentType = "Outdoor";
+
+  await renderSlots();
 
 });
