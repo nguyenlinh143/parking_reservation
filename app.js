@@ -1,7 +1,34 @@
 const slots = {
+ // Indoor parking: Slots 1 to 2
+    Indoor: [
+        "I1",
+        "I2"
+    ],
+    // Outdoor parking: Slots 3 to 8
+    Outdoor: [
+        "O3",
+        "O4",
+        "O5",
+        "O6",
+        "O7",
+        "O8"
+    ],
 
-    Outdoor: ["O1", "O2", "O3", "O4", "O5", "O6"],
-    Indoor: ["I1", "I2"]
+    // Bike parking: 12 slots
+    Bike: [
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6",
+        "B7",
+        "B8",
+        "B9",
+        "B10",
+        "B11",
+        "B12"
+    ]
 
 };
 
@@ -57,6 +84,9 @@ function showSlots(type) {
 
 }
 
+// =====================
+// SELECT SLOT
+// =====================
 function selectSlot(slot) {
 
     let date = document.getElementById("checkDate").value;
