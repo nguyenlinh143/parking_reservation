@@ -57,9 +57,6 @@ function showSlots(type) {
 
 }
 
-// =====================
-// SELECT SLOT
-// =====================
 function selectSlot(slot) {
 
     let date = document.getElementById("checkDate").value;
